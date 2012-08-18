@@ -85,6 +85,15 @@
 			<label index="label_doaction_swap">Swap</label>
 			<label index="label_doaction_discard">Discard</label>
 			<label index="label_doaction_generatePreviewLink">Generate Workspace Preview Link</label>
+			<label index="language.allLanguages">all languages</label>
+			<label index="language.selectLanguage">all languages</label>
+			<label index="integrity.dependsOnDefaultLanguageRecord"><![CDATA[Record "%s" depends on default language record]]></label>
+			<label index="integrity.isDefaultLanguageRecord"><![CDATA[Default language record for record "%s"]]></label>
+			<label index="integrity.hasIssuesDescription">The integrity check discovered several issues, see status icons infront of each record for further details.</label>
+			<label index="integrity.hasIssuesQuestion">Do you want to continue?</label>
+			<label index="status.info">Information</label>
+			<label index="status.warning">Warning</label>
+			<label index="status.error">Error</label>
 		</languageKey>
 	</data>
 </T3locallang>

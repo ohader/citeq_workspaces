@@ -138,9 +138,24 @@ class tx_Workspaces_ExtDirect_ActionHandler extends tx_Workspaces_ExtDirect_Abst
 	}
 
 	/**
+	 * Saves the selected language.
+	 *
+	 * @param integer|string $language
+	 * @return void
+	 */
+	public function saveLanguageSelection($language) {
+		if (t3lib_div::testInt($language) === FALSE && $language !== 'all') {
+			$language = 'all';
+		}
+
+		$GLOBALS['BE_USER']->uc['moduleData']['Workspaces'][$GLOBALS['BE_USER']->workspace]['language'] = $language;
+		$GLOBALS['BE_USER']->writeUC();
+	}
+
+	/**
 	 * Gets the dialog window to be displayed before a record can be sent to the next stage.
 	 *
-	 *	@param integer $uid
+	 * @param integer $uid
 	 * @param string $table
 	 * @param integer $t3ver_oid
 	 * @return array

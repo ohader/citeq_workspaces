@@ -48,7 +48,9 @@ TYPO3.Workspaces.RowDetail.rowDataStore = new Ext.data.DirectStore({
 		{name : 'live_record'},
 		{name : 'comments'},
 		{name : 'icon_Live'},
-		{name : 'icon_Workspace'}
+		{name : 'icon_Workspace'},
+		{name : 'languageValue'},
+		{name : 'integrity'}
 	]
 });
 
@@ -295,6 +297,7 @@ TYPO3.Workspaces.MainStore = new Ext.data.GroupingStore({
 	baseParams: {
 		depth : 990,
 		id: TYPO3.settings.Workspaces.id,
+		language: TYPO3.settings.Workspaces.language,
 		query: '',
 		start: 0,
 		limit: 30

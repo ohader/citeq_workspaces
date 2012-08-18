@@ -104,9 +104,10 @@ class tx_Workspaces_Service_Workspaces {
 	 * @param	integer		Real workspace ID, cannot be ONLINE (zero).
 	 * @param	boolean		If set, then the currently online versions are swapped into the workspace in exchange for the offline versions. Otherwise the workspace is emptied.
 	 * @param	integer		$pageId: ...
+	 * @param	integer		$language Select specific language only
 	 * @return	array		Command array for tcemain
 	 */
-	public function getCmdArrayForPublishWS($wsid, $doSwap, $pageId = 0) {
+	public function getCmdArrayForPublishWS($wsid, $doSwap, $pageId = 0, $language = NULL) {
 
 		$wsid = intval($wsid);
 		$cmd = array();
@@ -123,7 +124,7 @@ class tx_Workspaces_Service_Workspaces {
 			}
 
 				// Select all versions to swap:
-			$versions = $this->selectVersionsInWorkspace($wsid, 0, $stage, ($pageId ? $pageId : -1), 0, 'tables_modify');
+			$versions = $this->selectVersionsInWorkspace($wsid, 0, $stage, ($pageId ? $pageId : -1), 0, 'tables_modify', $language);
 
 				// Traverse the selection to build CMD array:
 			foreach ($versions as $table => $records) {
@@ -143,9 +144,10 @@ class tx_Workspaces_Service_Workspaces {
 	 * @param	integer		Real workspace ID, cannot be ONLINE (zero).
 	 * @param	boolean		Run Flush (true) or ClearWSID (false) command
 	 * @param	integer		$pageId: ...
+	 * @param	integer		$language Select specific language only
 	 * @return	array		Command array for tcemain
 	 */
-	public function getCmdArrayForFlushWS($wsid, $flush = TRUE, $pageId = 0) {
+	public function getCmdArrayForFlushWS($wsid, $flush = TRUE, $pageId = 0, $language = NULL) {
 
 		$wsid = intval($wsid);
 		$cmd = array();
@@ -155,7 +157,7 @@ class tx_Workspaces_Service_Workspaces {
 			$stage = -99;
 
 				// Select all versions to swap:
-			$versions = $this->selectVersionsInWorkspace($wsid, 0, $stage, ($pageId ? $pageId : -1), 0, 'tables_modify');
+			$versions = $this->selectVersionsInWorkspace($wsid, 0, $stage, ($pageId ? $pageId : -1), 0, 'tables_modify', $language);
 
 				// Traverse the selection to build CMD array:
 			foreach ($versions as $table => $records) {
@@ -180,9 +182,10 @@ class tx_Workspaces_Service_Workspaces {
 	 * @param	integer		Page id: Live page for which to find versions in workspace!
 	 * @param	integer		Recursion Level - select versions recursive - parameter is only relevant if $pageId != -1
 	 * @param	string		How to collect records for "listing" or "modify" these tables. Support the permissions of each type of record (@see t3lib_userAuthGroup::check).
-	 * @return	array		Array of all records uids etc. First key is table name, second key incremental integer. Records are associative arrays with uid, t3ver_oid and t3ver_swapmode fields. The pid of the online record is found as "livepid" the pid of the offline record is found in "wspid"
+	 * @parem	integer		$language Select specific language only
+	 * @return	array		Array of all records uids etc. First key is table name, second key incremental integer. Records are associative arrays with uid and t3ver_oidfields. The pid of the online record is found as "livepid" the pid of the offline record is found in "wspid"
 	 */
-	public function selectVersionsInWorkspace($wsid, $filter = 0, $stage = -99, $pageId = -1, $recursionLevel = 0, $selectionType = 'tables_select') {
+	public function selectVersionsInWorkspace($wsid, $filter = 0, $stage = -99, $pageId = -1, $recursionLevel = 0, $selectionType = 'tables_select', $language = NULL) {
 
 		$wsid = intval($wsid);
 		$filter = intval($filter);
@@ -207,7 +210,7 @@ class tx_Workspaces_Service_Workspaces {
 
 			if ($GLOBALS['TCA'][$table]['ctrl']['versioningWS']) {
 
-				$recs = $this->selectAllVersionsFromPages($table, $pageList, $wsid, $filter, $stage);
+				$recs = $this->selectAllVersionsFromPages($table, $pageList, $wsid, $filter, $stage, $language);
 				if (intval($GLOBALS['TCA'][$table]['ctrl']['versioningWS']) === 2) {
 					$moveRecs = $this->getMoveToPlaceHolderFromPages($table, $pageList, $wsid, $filter, $stage);
 					$recs = array_merge($recs, $moveRecs);
@@ -228,22 +231,40 @@ class tx_Workspaces_Service_Workspaces {
 	 * @param string $pageList
 	 * @param integer $filter
 	 * @param integer $stage
+	 * @param integer $language
 	 * @return array
 	 */
-	protected function selectAllVersionsFromPages($table, $pageList, $wsid, $filter, $stage) {
+	protected function selectAllVersionsFromPages($table, $pageList, $wsid, $filter, $stage, $language = NULL) {
+		$isTableLocalizable = t3lib_BEfunc::isTableLocalizable($table);
+		$languageParentField = '';
 
-		$fields = 'A.uid, A.t3ver_oid,' . ($table==='pages' ? ' A.t3ver_swapmode,' : '') . 'B.pid AS wspid, B.pid AS livepid';
-		if (t3lib_BEfunc::isTableLocalizable($table)) {
+			// If table is not localizable, but localized reocrds shall
+			// be collected, an empty result array needs to be returned:
+		if ($isTableLocalizable === FALSE && $language > 0) {
+			return array();
+		} elseif ($isTableLocalizable) {
+			$languageParentField = 'A.' . $GLOBALS['TCA'][$table]['ctrl']['transOrigPointerField'] . ', ';
+		}
+
+		$fields = 'A.uid, A.t3ver_oid, A.t3ver_stage, ' . $languageParentField . 'B.pid AS wspid, B.pid AS livepid';
+
+		if ($isTableLocalizable) {
 			$fields .= ', A.' . $GLOBALS['TCA'][$table]['ctrl']['languageField'];
 		}
+
 		$from = $table . ' A,' . $table . ' B';
 
 			// Table A is the offline version and pid=-1 defines offline
 		$where = 'A.pid=-1 AND A.t3ver_state!=4';
+
 		if ($pageList) {
 			$pidField = ($table==='pages' ? 'uid' : 'pid');
 			$pidConstraint = strstr($pageList, ',') ? ' IN (' . $pageList . ')' : '=' . $pageList;
 			$where .= ' AND B.' . $pidField . $pidConstraint;
+		}
+
+		if ($isTableLocalizable && t3lib_div::testInt($language)) {
+			$where .= ' AND A.' . $GLOBALS['TCA'][$table]['ctrl']['languageField'] . '=' . $language;
 		}
 
 		/**
@@ -355,8 +376,10 @@ class tx_Workspaces_Service_Workspaces {
 		 * mount points are not covered yet
 		 **/
 		$perms_clause = $GLOBALS['BE_USER']->getPagePermsClause(1);
+
+		/** @var $searchObj t3lib_fullsearch */
 		$searchObj = t3lib_div::makeInstance('t3lib_fullsearch');
-		$pageList = FALSE;
+
 		if ($pageId > 0) {
 			$pageList = $searchObj->getTreeList($pageId, $recursionLevel, 0, $perms_clause);
 		} else {

@@ -40,6 +40,10 @@ TYPO3.Workspaces.Configuration.GridFilters = new Ext.ux.grid.GridFilters({
 			dataIndex : 'workspace_Title'
 		},
 		{
+			type : 'numeric',
+			dataIndex : 'languageValue'
+		},
+		{
 			type : 'string',
 			dataIndex : 'label_Live'
 		},
@@ -60,6 +64,9 @@ TYPO3.Workspaces.Configuration.StoreFieldArray = [
 	{name : 'livepid', type : 'int'},
 	{name : 'stage', type: 'int'},
 	{name : 'change',type : 'int'},
+	{name : 'languageValue'},
+	{name : 'language'},
+	{name : 'integrity'},
 	{name : 'label_Live'},
 	{name : 'label_Workspace'},
 	{name : 'label_Stage'},
@@ -82,6 +89,21 @@ TYPO3.Workspaces.Configuration.StoreFieldArray = [
 
 ];
 
+TYPO3.Workspaces.Configuration.Integrity = new Ext.grid.Column({
+	width: 24,
+	hideable: true,
+	sortable: false,
+	header: '<span class="' + TYPO3.settings.Workspaces.icons.integrity + '">&nbsp;</span>',
+	renderer: function(value, meta, record) {
+		if (record.json.integrity.status !== 'success') {
+			var cls = TYPO3.settings.Workspaces.icons[record.json.integrity.status] + ' t3-visible';
+			var title = TYPO3.lang['status.' + record.json.integrity.status];
+			var message = record.json.integrity.messages;
+
+			return '<span class="' + cls + '" ext:qtitle="' + title + '" ext:qtip="' + message + '">&nbsp;</span>';
+		}
+	}
+});
 TYPO3.Workspaces.Configuration.WsPath = {
 	id: 'path_Workspace',
 	dataIndex : 'path_Workspace',
@@ -129,6 +151,20 @@ TYPO3.Workspaces.Configuration.WsTitleWithIcon = {
 	},
 	filter : {type: 'string'}
 };
+
+TYPO3.Workspaces.Configuration.Language = {
+	id: 'language',
+	dataIndex: 'languageValue',
+	width: 30,
+	hideable: true,
+	sortable: true,
+	header: '<span class="' + TYPO3.settings.Workspaces.icons.language + '">&nbsp;</span>',
+	filter: { type: 'string '},
+	renderer: function(value, metaData, record) {
+		return '<span class="' + record.json.language.cls + '" title="' + record.json.language.title + '">&nbsp;</span>';
+	}
+};
+
 TYPO3.Workspaces.Configuration.TitleWithIcon = {
 	id: 'label_Live',
 	dataIndex : 'label_Live',
@@ -347,6 +383,15 @@ TYPO3.Workspaces.Configuration.SwapButton = {
 			,tooltip: TYPO3.lang["tooltip.swap"]
 			,handler: function(grid, rowIndex, colIndex) {
 				var record = TYPO3.Workspaces.MainStore.getAt(rowIndex);
+				var parameters = {
+					type: 'selection',
+					selection: [{
+						table: record.json.table,
+						versionId: record.json.uid,
+						liveId: record.json.t3ver_oid
+					}]
+				};
+
 				var configuration = {
 					title: TYPO3.lang["window.swap.title"],
 					msg: TYPO3.lang["window.swap.message"],
@@ -357,7 +402,9 @@ TYPO3.Workspaces.Configuration.SwapButton = {
 					}
 				};
 
-				top.TYPO3.Dialog.QuestionDialog(configuration);
+				TYPO3.Workspaces.Actions.checkIntegrity(parameters, function() {
+					top.TYPO3.Dialog.QuestionDialog(configuration);
+				});
 			},
 			getClass: function(v, meta, rec) {
 				if(!rec.json.allowedAction_swap) {
