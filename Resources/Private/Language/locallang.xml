@@ -55,6 +55,7 @@
 			<label index="tooltip.sendToNextStage">Send record to next Stage</label>
 			<label index="tooltip.discardVersion">Discard workspace version of record.</label>
 			<label index="tooltip.swap">Swap live and workspace versions of record</label>
+			<label index="tooltip.showHistory">Show history of workspace version</label>
 			<label index="window.discard.title">Discard workspace version of record.</label>
 			<label index="window.discard.message">Do you really want to discard this version from workspace?</label>
 			<label index="window.swap.title">Swap version</label>
