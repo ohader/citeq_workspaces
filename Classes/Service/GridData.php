@@ -109,6 +109,7 @@ class tx_Workspaces_Service_GridData {
 
 			foreach ($versions as $table => $records) {
 				$versionArray = array('table' => $table);
+				$hiddenField = $this->getTcaEnableColumnsFieldName($table, 'disabled');
 				$isRecordTypeAllowedToModify = $GLOBALS['BE_USER']->check('tables_modify', $table);
 
 				foreach ($records as $record) {
@@ -121,13 +122,13 @@ class tx_Workspaces_Service_GridData {
 
 					$this->getIntegrityService()->checkElement($combinedRecord);
 
-					if (isset($GLOBALS['TCA'][$table]['columns']['hidden'])) {
-						$recordState = $this->workspaceState($versionRecord['t3ver_state'], $origRecord['hidden'], $versionRecord['hidden']);
+					if ($hiddenField !== NULL) {
+						$recordState = $this->workspaceState($versionRecord['t3ver_state'], $origRecord[$hiddenField], $versionRecord[$hiddenField]);
 					} else {
 						$recordState = $this->workspaceState($versionRecord['t3ver_state']);
 					}
 					$isDeletedPage = ($table == 'pages' && $recordState == 'deleted');
-					$viewUrl =  tx_Workspaces_Service_Workspaces::viewSingleRecord($table, $record['t3ver_oid'], $origRecord);
+					$viewUrl =  tx_Workspaces_Service_Workspaces::viewSingleRecord($table, $record['uid'], $origRecord, $versionRecord);
 
 					$pctChange = $this->calculateChangePercentage($table, $origRecord, $versionRecord);
 					$versionArray['id'] = $table . ':' . $record['uid'];
@@ -246,9 +247,7 @@ class tx_Workspaces_Service_GridData {
 	protected function setDataArrayIntoCache (array $versions, $filterTxt) {
 		if (TYPO3_UseCachingFramework === TRUE) {
 			$hash = $this->calculateHash($versions, $filterTxt);
-			$content = serialize($this->dataArray);
-
-			$this->workspacesCache->set($hash, $content, array($this->currentWorkspace));
+			$this->workspacesCache->set($hash, $this->dataArray, array($this->currentWorkspace));
 		}
 	}
 
@@ -267,8 +266,8 @@ class tx_Workspaces_Service_GridData {
 
 			$content = $this->workspacesCache->get($hash);
 
-			if ($content != FALSE) {
-				$this->dataArray = unserialize($content);
+			if ($content !== FALSE) {
+				$this->dataArray = $content;
 				$cacheEntry = TRUE;
 			}
 		}
@@ -526,6 +525,23 @@ class tx_Workspaces_Service_GridData {
 		}
 
 		return $state;
+	}
+
+	/**
+	 * Gets the field name of the enable-columns as defined in $TCA.
+	 *
+	 * @param string $table Name of the table
+	 * @param string $type Type to be fetches (e.g. 'disabled', 'starttime', 'endtime', 'fe_group)
+	 * @return string|NULL The accordant field name or NULL if not defined
+	 */
+	protected function getTcaEnableColumnsFieldName($table, $type) {
+		$fieldName = NULL;
+
+		if (!(empty($GLOBALS['TCA'][$table]['ctrl']['enablecolumns'][$type]))) {
+			$fieldName = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns'][$type];
+		}
+
+		return $fieldName;
 	}
 
 	/**
