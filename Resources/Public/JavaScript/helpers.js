@@ -172,6 +172,7 @@ TYPO3.Workspaces.Helpers = {
 						listeners: {
 							beforeload: function(store, options) {
 								store.setBaseParam('table', configuration.table);
+								store.setBaseParam('liveId', configuration.liveId);
 								store.setBaseParam('versionId', configuration.versionId);
 							}
 						}

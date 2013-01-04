@@ -98,7 +98,7 @@ class tx_Workspaces_ExtDirect_Server extends tx_Workspaces_ExtDirect_AbstractHan
 	public function getHistory($parameters) {
 		/** @var $historyService Tx_Workspaces_Service_History */
 		$historyService = t3lib_div::makeInstance('Tx_Workspaces_Service_History');
-		$history = $historyService->getHistory($parameters->table, $parameters->versionId);
+		$history = $historyService->getHistory($parameters->table, $parameters->liveId);
 
 		return array(
 			'data' => $history,
